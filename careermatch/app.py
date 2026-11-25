@@ -25,7 +25,10 @@ def create_app(test_config=None):
                 static_folder=os.path.join(ROOT, "static"))
     app.config.update(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-change-me"),
-        DATABASE=os.path.join(ROOT, "instance", "careermatch.db"),
+        # Vercel's filesystem is read-only except /tmp, so keep the DB there when deployed.
+        DATABASE=os.environ.get("DATABASE_PATH") or (
+            "/tmp/careermatch/careermatch.db" if os.environ.get("VERCEL")
+            else os.path.join(ROOT, "instance", "careermatch.db")),
         SEED=True,
         MAX_CONTENT_LENGTH=5 * 1024 * 1024,  # 5 MB resume limit
     )

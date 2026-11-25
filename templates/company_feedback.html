@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_header %}
+{% block title %}Feedback · CareerMatch AI{% endblock %}
+{% block content %}
+{{ page_header('Post-fair feedback', 'Tell the placement office how well the fair worked for ' ~ co.name ~ ' (1 = poor, 5 = excellent).', 'message') }}
+<form method="post" class="card" style="max-width:620px">
+  <div class="card-head"><h2 style="margin:0">{{ icon('message', 18) }} Your ratings</h2>
+    {% if fb %}<span class="tag ok">{{ icon('check', 12) }} Submitted</span>{% endif %}</div>
+  {% for key, lbl in [('candidate_quality','Candidate quality'),('skill_alignment','Skill alignment'),('shortlist_accuracy','Shortlist accuracy')] %}
+    <label>{{ lbl }}</label>
+    <select name="{{ key }}">{% for v in range(1, 6) %}<option value="{{ v }}" {{ 'selected' if (fb and fb[key] == v) or (not fb and v == 4) }}>{{ v }}</option>{% endfor %}</select>
+  {% endfor %}
+  <label>Candidates to be interviewed</label><input type="number" min="0" name="to_interview" value="{{ fb.to_interview if fb else 0 }}">
+  <label>Comments</label><textarea name="comments" placeholder="What should the placement office change next time?">{{ fb.comments if fb else '' }}</textarea>
+  <p style="margin-bottom:0"><button>{{ 'Update feedback' if fb else 'Submit feedback' }}</button></p>
+</form>
+{% endblock %}

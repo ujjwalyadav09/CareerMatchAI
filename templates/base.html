@@ -1,0 +1,66 @@
+<!doctype html>
+{% from "_ui.html" import icon %}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CareerMatch AI{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% set ep = request.endpoint or '' %}
+{% if user %}
+  {% if user.role == 'student' %}
+    {% set nav = [('student_home', 'Matches', 'target', ['student_home', 'student_company']),
+                  ('student_profile', 'Profile', 'user', ['student_profile', 'student_resume']),
+                  ('student_feedback', 'Feedback', 'message', ['student_feedback'])] %}
+  {% elif user.role == 'company' %}
+    {% set nav = [('company_home', 'Shortlist & Schedule', 'users', ['company_home', 'company_candidate']),
+                  ('company_profile', 'Requirements', 'briefcase', ['company_profile']),
+                  ('company_feedback', 'Feedback', 'message', ['company_feedback'])] %}
+  {% else %}
+    {% set nav = [('admin_home', 'Fair setup', 'settings', ['admin_home']),
+                  ('admin_analytics', 'Analytics', 'chart', ['admin_analytics']),
+                  ('admin_ai', 'AI settings', 'settings', ['admin_ai'])] %}
+  {% endif %}
+{% endif %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="logo" style="font-size:12px;font-weight:700">CM</span>
+      <span>CareerMatch <span class="brand-ai">· Career Fair Portal</span></span>
+    </a>
+    {% if user %}
+    <nav class="nav">
+      {% for endpoint, label, ic, matches in nav %}
+        <a href="{{ url_for(endpoint) }}" class="{{ 'active' if ep in matches }}">{{ icon(ic, 17) }}<span>{{ label }}</span></a>
+      {% endfor %}
+    </nav>
+    <div class="userbox">
+      <span class="avatar">{{ user.username[:1]|upper }}</span>
+      <span class="who"><strong>{{ user.username }}</strong><small>{{ {'admin': 'Placement office', 'company': 'Recruiter', 'student': 'Student'}[user.role] }}</small></span>
+      <a class="icon-btn" href="{{ url_for('logout') }}" title="Log out" aria-label="Log out">{{ icon('logout', 18) }}</a>
+    </div>
+    {% else %}
+    <nav class="nav">
+      <a href="{{ url_for('login') }}" class="{{ 'active' if ep == 'login' }}">{{ icon('login', 17) }}<span>Log in</span></a>
+      <a href="{{ url_for('register') }}" class="{{ 'active' if ep == 'register' }}">{{ icon('user', 17) }}<span>Student sign-up</span></a>
+    </nav>
+    {% endif %}
+  </div>
+</header>
+
+<main class="{% block main_class %}{% endblock %}">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ cat }}" role="status">
+      {{ icon('check' if cat == 'ok' else 'alert', 18) }}<div>{{ msg }}</div>
+    </div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+<footer>
+  <span>{{ fair.fair_name }} · {{ fair.fair_date }}</span>
+  <span>Training &amp; Placement Office</span>
+</footer>
+</body>
+</html>

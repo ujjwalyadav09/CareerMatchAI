@@ -1,0 +1,12 @@
+{# expects `ex` (output of matching.explain) #}
+{% set acad = [[ex.cgpa_margin / 3, 1]|min, 0]|max %}
+<div class="breakdown">
+  <div class="hbar"><span>Skill fit</span><div class="bar"><span style="width: {{ (ex.skill_fit * 100)|round }}%"></span></div><span>{{ (ex.skill_fit * 100)|round|int }}%</span></div>
+  <div class="hbar"><span>Interest</span><div class="bar"><span style="width: {{ 100 if ex.interest_match else 0 }}%"></span></div><span>{{ 'Yes' if ex.interest_match else 'No' }}</span></div>
+  <div class="hbar"><span>CGPA margin</span><div class="bar"><span style="width: {{ (acad * 100)|round }}%"></span></div><span>{{ '%+.1f'|format(ex.cgpa_margin) }}</span></div>
+</div>
+<div class="tags">
+  {% for k in ex.matched_required %}<span class="tag ok">&#10003; {{ k }}</span>{% endfor %}
+  {% for k in ex.missing_required %}<span class="tag miss">&#10007; {{ k }}</span>{% endfor %}
+  {% for k in ex.matched_preferred %}<span class="tag">+ {{ k }}</span>{% endfor %}
+</div>

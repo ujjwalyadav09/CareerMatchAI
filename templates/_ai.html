@@ -1,0 +1,20 @@
+{% macro ai_block(result) %}
+<div class="ai-box">
+  <div class="ai-head">
+    {% set names = {'gemini': 'Google Gemini', 'groq': 'Groq', 'claude': 'Claude'} %}
+    <span>{{ ('Generated with ' ~ names[result.source]) if result.source in names else 'Generated from your match data' }}</span>
+    {% if result.error %}<span class="muted" style="font-size:12.5px">(AI service unavailable: {{ result.error[:90] }})</span>{% endif %}
+  </div>
+  {% set ns = namespace(open=false) %}
+  {% for line in result.text.splitlines() %}{% set l = line.strip() %}
+    {% if l.startswith('- ') or l.startswith('• ') or l.startswith('* ') %}
+      {% if not ns.open %}<ul>{% set ns.open = true %}{% endif %}<li>{{ l[2:]|replace('**', '') }}</li>
+    {% elif l %}
+      {% if ns.open %}</ul>{% set ns.open = false %}{% endif %}
+      {% set clean = l|replace('**', '')|replace('#', '')|trim %}
+      {% if clean.endswith(':') %}<h3>{{ clean[:-1] }}</h3>{% else %}<p>{{ clean }}</p>{% endif %}
+    {% endif %}
+  {% endfor %}
+  {% if ns.open %}</ul>{% endif %}
+</div>
+{% endmacro %}

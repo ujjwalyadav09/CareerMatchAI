@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_ai.html" import ai_block %}
+{% from "_ui.html" import icon, ring %}
+{% block title %}{{ s.name }} · CareerMatch AI{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('company_home') }}">{{ icon('arrow-left', 16) }} Back to shortlist</a>
+<div class="card">
+  <div class="match-top">
+    <span class="avatar" style="width:56px;height:56px;font-size:22px">{{ s.name[:1] }}</span>
+    <div class="grow"><h1>{{ s.name }}</h1>
+      <div class="meta"><span>{{ s.branch }}</span><span>CGPA {{ s.cgpa }}</span><span>{{ s.backlogs }} backlog(s)</span>
+        <span>{{ icon('calendar', 13) }} graduating {{ s.grad_year or '-' }}</span></div></div>
+    {{ ring(ex.score, 'fit score', 'lg') }}
+  </div>
+  <div class="grid-2" style="margin-top:16px">
+    <div>
+      <h3>Fit for {{ co.role_title or co.name }}</h3>
+      {% include "_explain.html" %}
+    </div>
+    <div>
+      <h3>All skills</h3>
+      <div class="tags">{% for k in s.skills %}<span class="tag {{ 'ok' if k in co.required else ('' if k in co.preferred else 'plain') }}">{{ k }}</span>{% endfor %}</div>
+      <h3 style="margin-top:12px">Interests</h3>
+      <div class="tags">{% for i in s.interests %}<span class="tag plain">{{ i }}</span>{% else %}<span class="muted">-</span>{% endfor %}</div>
+      {% if s.email %}<p style="margin-bottom:0"><strong>Email:</strong> {{ s.email }}</p>{% endif %}
+      {% if s.resume_url %}<p><a class="btn secondary small" href="{{ s.resume_url }}" target="_blank" rel="noopener">{{ icon('file', 15) }} Open resume</a></p>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="card">
+  <h2>Candidate summary</h2>
+  {% if brief %}{{ ai_block(brief) }}
+  {% else %}
+  <div class="ai-cta">
+    <p>Overall fit, strengths, and points to check in the interview.</p>
+    <a class="btn secondary" href="{{ url_for('company_candidate', sid=s.id, brief=1) }}">Generate summary</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

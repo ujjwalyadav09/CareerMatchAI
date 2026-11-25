@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_header, stat %}
+{% block title %}AI &amp; ML · CareerMatch AI{% endblock %}
+{% block content %}
+{{ page_header('AI settings', 'Text generation for preparation guides and candidate summaries, and weight tuning from fair outcomes.', 'settings') }}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Text generation provider</h2>
+    <span>Currently using:
+      {% if provider %}<span class="tag ok">{{ icon('check', 12) }} {{ labels[provider] }}</span>
+      {% else %}<span class="tag miss">Offline mode (rule-based)</span>{% endif %}</span>
+  </div>
+  <div class="grid-2">
+    <div>
+      <p class="muted" style="margin-top:0">Used for the student <strong>preparation guide</strong> and the recruiter <strong>candidate summary</strong>.
+        Without a key, or if a call fails, the app builds them from the match data instead.</p>
+      <ol class="steps-list">
+        <li><span>Get a <strong>free</strong> key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>
+          (Gemini) or <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a>.</span></li>
+        <li><span>Paste it into the matching row on the right.</span></li>
+        <li><span>Leave the model blank (auto-detect) and click <strong>Save &amp; test connection</strong>.</span></li>
+      </ol>
+    </div>
+    <form method="post" action="{{ url_for('admin_ai_provider') }}">
+      <label style="margin-top:0">Provider</label>
+      <select name="ai_provider">
+        {% for val, lbl in [('auto', 'Auto (first provider with a key)'), ('gemini', 'Google Gemini (free)'), ('groq', 'Groq (free)'), ('claude', 'Anthropic Claude (paid)'), ('offline', 'Offline only')] %}
+        <option value="{{ val }}" {{ 'selected' if choice == val }}>{{ lbl }}</option>{% endfor %}
+      </select>
+      {% for p in providers %}
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px">
+        <div class="card-head" style="margin-bottom:0"><strong>{{ p.label }}</strong>
+          <span class="muted" style="font-size:12.5px">{{ p.key }} · <a href="{{ p.key_url }}" target="_blank" rel="noopener">get key</a></span></div>
+        <div class="row">
+          <div style="flex:2 1 200px"><label>API key</label><input type="password" name="{{ p.id }}_api_key" placeholder="paste key to save/replace" autocomplete="off"></div>
+          <div><label>Model <span class="hint">blank = auto</span></label><input type="text" name="{{ p.id }}_model" value="{{ p.model }}" placeholder="auto"></div>
+        </div>
+        {% if p.key != 'not set' %}<label class="muted" style="font-weight:400;margin-bottom:0"><input type="checkbox" name="{{ p.id }}_clear" value="1"> remove saved key</label>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="btn-row" style="margin-top:14px">
+        <button name="test" value="1">{{ icon('bolt', 16) }} Save &amp; test connection</button>
+        <button class="secondary">Save only</button>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-bottom:0">Keys are stored only in this app's local database (<code>instance/careermatch.db</code>) and shown masked.
+        Environment variables <code>GEMINI_API_KEY</code>, <code>GROQ_API_KEY</code>, <code>ANTHROPIC_API_KEY</code> also work.</p>
+    </form>
+  </div>
+</div>
+
+<h2 class="section-title">Match weight tuning</h2>
+<div class="grid">
+  <div class="card">
+    <h2>{{ icon('calendar', 18) }} Step 1 · Fair-day data</h2>
+    <div class="tags" style="margin-bottom:10px">
+      <span class="tag plain">{{ counts.get('booked', 0) }} booked</span>
+      <span class="tag ok">{{ counts.get('attended', 0) }} attended</span>
+      <span class="tag bad">{{ counts.get('no_show', 0) }} no-show</span>
+      <span class="tag">{{ n_outcomes }} interview/offer outcomes</span>
+    </div>
+    <p class="muted">Real data comes from recruiters marking attendance and outcomes. For a demo, simulate them for every booking.
+      The chance of an interview rises with true skill fit.</p>
+    <form method="post" action="{{ url_for('admin_simulate') }}"><button class="secondary">{{ icon('bolt', 16) }} Simulate fair day</button></form>
+  </div>
+  <div class="card">
+    <h2>{{ icon('brain', 18) }} Step 2 · Train the model</h2>
+    <p class="muted">Logistic regression on attended interactions. Inputs: skill fit F, interest I, academic margin A.
+      Target: moved to interview or offer. Uses a 70/30 train/test split.</p>
+    <form method="post" action="{{ url_for('admin_train') }}"><button>{{ icon('brain', 16) }} Train model</button></form>
+  </div>
+</div>
+
+{% if report %}
+<div class="card">
+  <h2>{{ icon('chart', 18) }} Step 3 · Results</h2>
+  {% if report.ok %}
+  <div class="stats">
+    {{ stat(report.n, 'examples (' ~ report.positives ~ ' positive)', 'users') }}
+    {{ stat(num(report.auc_current, 3), 'hold-out AUC, current weights', 'target') }}
+    {{ stat(num(report.auc_learned, 3), 'hold-out AUC, learned weights', 'chart', 'ok' if (report.auc_learned or 0) >= (report.auc_current or 0) else 'warn') }}
+    {{ stat(pct(report.accuracy), 'model accuracy (test, n=' ~ report.test ~ ')', 'check') }}
+  </div>
+  <div class="grid-2">
+    <div>
+      {% for k in ['skill', 'interest', 'academic'] %}
+      <h3 style="margin-top:8px;text-transform:capitalize">{{ k }} <span class="hint">coefficient {{ report.coefficients[k] }}</span></h3>
+      <div class="hbar" style="margin:4px 0"><span class="muted">Current</span><div class="bar"><span style="width: {{ (report.current[k] * 100)|round }}%;background:var(--line-2)"></span></div><span>{{ report.current[k] }}</span></div>
+      <div class="hbar" style="margin:4px 0"><span>Learned</span><div class="bar"><span style="width: {{ (report.learned[k] * 100)|round }}%"></span></div><span>{{ report.learned[k] }}</span></div>
+      {% endfor %}
+    </div>
+    <div>
+      <div class="flash info" style="margin-top:8px">{{ icon('info', 18) }}<div>AUC is the chance that a positive interaction scores above a negative one
+        (0.5 = random, 1.0 = perfect). Apply the learned weights if their AUC is higher.</div></div>
+      <form method="post" action="{{ url_for('admin_apply_weights') }}"><button>{{ icon('check', 16) }} Apply learned weights to matching</button></form>
+    </div>
+  </div>
+  {% else %}
+  <div class="flash error">{{ icon('alert', 18) }}<div>{{ report.reason }} (have {{ report.n }} examples, {{ report.positives }} positive)</div></div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

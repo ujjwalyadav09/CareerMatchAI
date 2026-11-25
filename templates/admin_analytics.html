@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_header, stat %}
+{% block title %}Analytics · CareerMatch AI{% endblock %}
+{% block content %}
+{% set e = a.engagement %}{% set q = a.quality %}
+{{ page_header('Fair analytics', 'Every figure is computed from stored profiles, bookings, feedback and outcomes.', 'chart') }}
+
+<form class="card row" method="get" style="align-items:end">
+  <div><label style="margin-top:0">Branch</label><select name="branch"><option value="">All branches</option>
+    {% for b in branches %}<option {{ 'selected' if f.branch == b }}>{{ b }}</option>{% endfor %}</select></div>
+  <div><label style="margin-top:0">Domain</label><select name="domain"><option value="">All domains</option>
+    {% for d in domains %}<option value="{{ d }}" {{ 'selected' if f.domain == d }}>{{ d|capitalize }}</option>{% endfor %}</select></div>
+  <div><label style="margin-top:0">Company</label><select name="company"><option value="">All companies</option>
+    {% for c in comps %}<option value="{{ c.id }}" {{ 'selected' if f.company == c.id }}>{{ c.name }}</option>{% endfor %}</select></div>
+  <div style="flex:0 0 auto" class="btn-row"><button>Apply filters</button> <a href="{{ url_for('admin_analytics') }}">Reset</a></div>
+</form>
+
+<h2 class="section-title">{{ icon('users', 19) }} Engagement</h2>
+<div class="stats">
+  {{ stat(e.students, 'students in view', 'user') }}
+  {{ stat(pct(e.profile_completion), 'avg profile completion', 'check') }}
+  {{ stat(pct(e.students_with_booking), 'students with ≥1 booking', 'calendar') }}
+  {{ stat(num(e.bookings_per_student), 'bookings per student', 'bolt') }}
+  {{ stat(pct(e.attendance_rate), e.attended ~ ' attended · ' ~ e.no_show ~ ' no-show', 'clock', 'ok' if e.attendance_rate and e.attendance_rate >= 0.8 else 'warn') }}
+</div>
+
+<h2 class="section-title">{{ icon('target', 19) }} Match quality &amp; feedback</h2>
+<div class="stats">
+  {{ stat(num(q.mean_score), 'mean match score of booked pairs', 'target') }}
+  {{ stat(pct(q.eligible_share), 'bookings from eligible matches', 'check', 'ok') }}
+  {{ stat(num(q.mean_relevance, 1) ~ ' / 5', 'student-rated relevance (n=' ~ q.student_responses ~ ')', 'star') }}
+  {{ stat(num(q.mean_usefulness, 1) ~ ' / 5', 'interaction usefulness', 'message') }}
+  {{ stat(num(q.mean_wait, 1) ~ ' min', 'reported wait at booth', 'clock') }}
+  {{ stat(num(q.mean_candidate_quality, 1) ~ ' / 5', 'candidate quality (n=' ~ q.company_responses ~ ')', 'briefcase') }}
+  {{ stat(num(q.mean_shortlist_accuracy, 1) ~ ' / 5', 'shortlist accuracy', 'star') }}
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>{{ icon('briefcase', 18) }} Desk utilization by company</h2>
+    {% for r in a.load_company %}
+    <div class="hbar"><span title="{{ r.name }}">{{ r.name }}</span><div class="bar"><span style="width: {{ [(r.util * 100)|round, 100]|min }}%"></span></div>
+      <span>{{ pct(r.util) }}</span></div>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <h2>{{ icon('clock', 18) }} Bookings by hour</h2>
+    {% set maxb = (a.load_time|map(attribute='bookings')|max) or 1 %}
+    {% for r in a.load_time %}
+    <div class="hbar"><span>{{ r.label }}</span><div class="bar"><span style="width: {{ (r.bookings / maxb * 100)|round }}%"></span></div>
+      <span>{{ r.bookings }}</span></div>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <h2>{{ icon('star', 18) }} Outcomes by company</h2>
+    <table><tr><th>Company</th><th class="num">Interviews</th><th class="num">Offers</th></tr>
+      {% for name, o in a.outcomes_company.items() %}<tr><td>{{ name }}</td><td class="num">{{ o.interview }}</td><td class="num"><strong>{{ o.offer }}</strong></td></tr>
+      {% else %}<tr><td colspan="3" class="muted">No outcomes recorded yet.</td></tr>{% endfor %}</table>
+  </div>
+  <div class="card">
+    <h2>{{ icon('users', 18) }} Outcomes by branch</h2>
+    <table><tr><th>Branch</th><th class="num">Interviews</th><th class="num">Offers</th></tr>
+      {% for name, o in a.outcomes_branch.items() %}<tr><td>{{ name }}</td><td class="num">{{ o.interview }}</td><td class="num"><strong>{{ o.offer }}</strong></td></tr>
+      {% else %}<tr><td colspan="3" class="muted">No outcomes recorded yet.</td></tr>{% endfor %}</table>
+  </div>
+  <div class="card">
+    <h2>{{ icon('alert', 18) }} Skill-gap insights</h2>
+    <p class="muted" style="margin-top:-6px;font-size:13.5px">Most common missing required skills among {{ a.low_match_students }} unmatched or low-scoring students, in their interest domains. Good topics for training workshops.</p>
+    {% set top = a.skill_gaps[0][1] if a.skill_gaps else 1 %}
+    {% for skill, n in a.skill_gaps %}
+    <div class="hbar"><span>{{ skill }}</span><div class="bar"><span style="width: {{ (n / top * 100)|round }}%"></span></div><span>{{ n }}</span></div>
+    {% else %}<p class="muted">No gaps found.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

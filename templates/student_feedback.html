@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_header %}
+{% block title %}Feedback · CareerMatch AI{% endblock %}
+{% block content %}
+{{ page_header('Post-fair feedback', 'Rate each company you met (1 = poor, 5 = excellent). It helps the placement office improve the next fair.', 'message') }}
+{% if not bookings %}<div class="card"><p class="muted">You have no bookings to give feedback on yet.</p></div>{% endif %}
+<div class="grid">
+{% for b in bookings %}{% set g = given.get(b.company_id) %}
+  <form method="post" class="card">
+    <div class="card-head"><h2 style="margin:0">{{ b.company_name }}</h2>
+      {% if g %}<span class="tag ok">{{ icon('check', 12) }} Submitted</span>{% else %}<span class="tag plain">Pending</span>{% endif %}</div>
+    <div class="muted" style="font-size:13px">{{ icon('clock', 13) }} {{ slot_label(b.slot) }}</div>
+    <input type="hidden" name="company_id" value="{{ b.company_id }}">
+    {% for key, lbl in [('relevance','Match relevance'),('usefulness','Interaction usefulness'),('convenience','Slot convenience')] %}
+      <label>{{ lbl }}</label>
+      <select name="{{ key }}">{% for v in range(1, 6) %}<option value="{{ v }}" {{ 'selected' if (g and g[key] == v) or (not g and v == 4) }}>{{ v }}</option>{% endfor %}</select>
+    {% endfor %}
+    <label>Wait time at booth (minutes)</label><input type="number" min="0" name="wait_minutes" value="{{ g.wait_minutes if g else 0 }}">
+    <label>Comments</label><textarea name="comments" placeholder="Anything that worked well or could be better">{{ g.comments if g else '' }}</textarea>
+    <p style="margin-bottom:0"><button>{{ 'Update feedback' if g else 'Submit' }}</button></p>
+  </form>
+{% endfor %}
+</div>
+{% endblock %}

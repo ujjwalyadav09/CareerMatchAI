@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon %}
+{% block content %}
+<div class="card narrow" style="text-align:center;padding:40px 24px">
+  <div class="page-ic" style="margin:0 auto 14px">{{ icon('alert', 22) }}</div>
+  <h1>{{ code }}</h1><p class="sub">{{ msg }}</p>
+  <p style="margin-top:18px"><a class="btn" href="{{ url_for('index') }}">{{ icon('home', 17) }} Go home</a></p>
+</div>
+{% endblock %}

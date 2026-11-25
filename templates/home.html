@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>{{ fair.fair_name }}</h1>
+  <p class="sub">Students are matched to participating companies by skills and eligibility, book a time with each recruiter,
+    and give feedback after the fair. Recruiters get a shortlist in advance; the placement office gets the reports.</p>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('login') }}">Log in</a>
+    <a class="btn secondary" href="{{ url_for('register') }}">New student? Register</a>
+  </div>
+</section>
+
+<div class="roles">
+  <div class="card">
+    <h3>Students</h3>
+    <p class="muted">Create a profile (or upload your resume), see which companies you are eligible for and why,
+      book interaction slots, and rate each interaction afterwards.</p>
+  </div>
+  <div class="card">
+    <h3>Recruiters</h3>
+    <p class="muted">Set role requirements and eligibility rules, review a ranked shortlist before the fair,
+      and record attendance, interviews and offers on the day.</p>
+  </div>
+  <div class="card">
+    <h3>Placement office</h3>
+    <p class="muted">Configure the fair, schedule slots for all students, and review engagement, booth load,
+      outcomes and common skill gaps.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>How matching works</h2>
+  <table>
+    <tr><th style="width:200px">Step</th><th>Rule</th></tr>
+    <tr><td>1. Eligibility</td><td>CGPA, branch and active backlogs must meet the company's criteria. Ineligible companies are never shown.</td></tr>
+    <tr><td>2. Score</td><td>{{ (fair.w_skill|float * 100)|round|int }}% skill fit (required and preferred skills), {{ (fair.w_interest|float * 100)|round|int }}% interest in the role's domain, {{ (fair.w_academic|float * 100)|round|int }}% CGPA margin above the cut-off.</td></tr>
+    <tr><td>3. Shortlist</td><td>Each student sees their top {{ fair.top_k }} companies; each company sees its ranked eligible candidates.</td></tr>
+    <tr><td>4. Booking</td><td>{{ fair.slot_len }}-minute slots, limited by desks per company, with no overlapping bookings for a student.</td></tr>
+  </table>
+</div>
+{% endblock %}

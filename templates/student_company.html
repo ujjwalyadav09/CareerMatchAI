@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_ai.html" import ai_block %}
+{% from "_ui.html" import icon, ring %}
+{% block title %}{{ co.name }} · CareerMatch AI{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('student_home') }}">{{ icon('arrow-left', 16) }} Back to matches</a>
+
+<div class="card">
+  <div class="match-top">
+    <div class="co-logo" style="width:56px;height:56px;font-size:22px">{{ co.name[:1] }}</div>
+    <div class="grow"><h1>{{ co.name }}</h1>
+      <div class="meta"><span>{{ icon('briefcase', 14) }} {{ co.role_title }}</span><span>{{ co.domain }}</span>
+        <span>{{ icon('users', 14) }} {{ co.desks }} recruiter desk(s)</span></div></div>
+    {{ ring(ex.score, 'match score', 'lg') }}
+  </div>
+  {% if co.description %}<p>{{ co.description }}</p>{% endif %}
+  <div class="grid-2" style="margin-top:10px">
+    <div>
+      <h3>Skills they want</h3>
+      <div class="tags">{% for k in co.required %}<span class="tag {{ 'ok' if k in s.skills else 'miss' }}">{{ k }}</span>{% endfor %}</div>
+      {% if co.preferred %}<h3 style="margin-top:10px">Nice to have</h3>
+      <div class="tags">{% for k in co.preferred %}<span class="tag {{ '' if k in s.skills else 'plain' }}">{{ k }}</span>{% endfor %}</div>{% endif %}
+    </div>
+    <div>
+      <h3>Eligibility</h3>
+      <div class="tags">
+        <span class="tag {{ 'ok' if s.cgpa >= co.min_cgpa else 'bad' }}">CGPA &ge; {{ co.min_cgpa }}</span>
+        <span class="tag {{ 'ok' if s.branch in co.branches else 'bad' }}">{{ co.branches|join(' / ') }}</span>
+        <span class="tag {{ 'ok' if s.backlogs <= co.max_backlogs else 'bad' }}">&le; {{ co.max_backlogs }} backlog(s)</span>
+      </div>
+    </div>
+  </div>
+  <hr>
+  <h3>Your match breakdown</h3>
+  {% if ex.eligible %}{% include "_explain.html" %}
+  {% else %}<div class="tags">{% for r in ex.ineligible_reasons %}<span class="tag bad">{{ icon('x', 12) }} {{ r }}</span>{% endfor %}</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Preparation guide</h2>
+  {% if coach %}{{ ai_block(coach) }}
+  {% else %}
+  <div class="ai-cta">
+    <p>Why you match, which skills to work on before the fair, what to say at the booth, and likely interview topics.</p>
+    <a class="btn secondary" href="{{ url_for('student_company', cid=co.id, coach=1) }}">Show preparation guide</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" id="book">
+  <h2>{{ icon('calendar', 18) }} Book an interaction slot</h2>
+  {% if already %}<div class="flash ok">{{ icon('check', 18) }}<div>You already have a slot with this company. See it on your <a href="{{ url_for('student_home') }}">matches page</a>.</div></div>
+  {% elif not can_book %}<p class="muted">Booking is only available for eligible matches above the match threshold.</p>
+  {% elif not free %}<p class="muted">No free slots that fit your schedule.</p>
+  {% else %}
+  <p class="muted">Pick a time. Only slots with a free desk that don't clash with your other bookings are shown.</p>
+  <form method="post" action="{{ url_for('student_book') }}">
+    <input type="hidden" name="company_id" value="{{ co.id }}">
+    {% set per_hour = (60 // (fair.slot_len|int)) or 1 %}
+    {% set ns = namespace(hour=-1) %}
+    {% for t in free %}
+      {% set h = t // per_hour %}
+      {% if h != ns.hour %}
+        {% if ns.hour != -1 %}</div></div>{% endif %}
+        <div class="slot-group"><h3>{{ slot_label(h * per_hour)[:5] }}</h3><div class="slots">
+        {% set ns.hour = h %}
+      {% endif %}
+      <button name="slot" value="{{ t }}">{{ icon('clock', 14) }} {{ slot_label(t) }}</button>
+    {% endfor %}
+    {% if ns.hour != -1 %}</div></div>{% endif %}
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

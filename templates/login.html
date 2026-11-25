@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Log in · CareerMatch AI{% endblock %}
+{% block content %}
+<div class="auth">
+  <div class="card">
+    <h1>Log in</h1>
+    <p class="sub">Students, recruiters and placement office staff.</p>
+    <form method="post" id="login-form">
+      <label for="username">Username</label><input type="text" id="username" name="username" required autofocus autocomplete="username">
+      <label for="password">Password</label><input type="password" id="password" name="password" required autocomplete="current-password">
+      <p style="margin-bottom:0"><button type="submit" style="width:100%">Log in</button></p>
+    </form>
+    <p class="muted" style="font-size:13px;margin-bottom:0">New student? <a href="{{ url_for('register') }}">Register here</a>.</p>
+  </div>
+  <div class="card">
+    <h3>Demo accounts</h3>
+    <table class="demo-table">
+      <tr><th>Role</th><th>Username</th><th>Password</th><th></th></tr>
+      {% for u, p, lbl in [('demo', 'student123', 'Student'), ('nimbussoft', 'company123', 'Recruiter'), ('admin', 'admin123', 'Placement office')] %}
+      <tr><td>{{ lbl }}</td><td><code>{{ u }}</code></td><td><code>{{ p }}</code></td>
+        <td class="num"><button type="button" class="secondary demo-btn" data-u="{{ u }}" data-p="{{ p }}">Use</button></td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.demo-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.getElementById('username').value = b.dataset.u;
+      document.getElementById('password').value = b.dataset.p;
+      document.getElementById('login-form').submit();
+    });
+  });
+</script>
+{% endblock %}

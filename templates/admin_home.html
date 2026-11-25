@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, page_header, stat %}
+{% block title %}Fair setup · CareerMatch AI{% endblock %}
+{% block content %}
+{{ page_header('Placement office', fair.fair_name ~ ' · ' ~ fair.fair_date, 'settings', (url_for('admin_analytics'), 'open analytics')) }}
+
+<div class="stats">
+  {{ stat(n_students, 'registered students', 'user') }}
+  {{ stat(comps|selectattr('participating')|list|length ~ ' / ' ~ comps|length, 'participating companies', 'briefcase') }}
+  {{ stat(n_bookings, 'active bookings', 'calendar', 'ok' if n_bookings else 'warn') }}
+  {{ stat(fair.num_slots ~ ' × ' ~ fair.slot_len ~ ' min', 'slots per desk', 'clock') }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>{{ icon('bolt', 18) }} Scheduling</h2></div>
+  <p class="muted" style="margin-top:-4px">The auto-scheduler takes every student's top {{ fair.max_bookings }} eligible matches in order of score and gives each one a random free,
+    clash-free slot. Existing bookings are kept.</p>
+  <div class="btn-row">
+    <form class="inline" method="post" action="{{ url_for('admin_auto_schedule') }}"><button>{{ icon('bolt', 16) }} Run auto-scheduler</button></form>
+    <span class="spacer"></span>
+    <a class="btn secondary small" href="{{ url_for('admin_export', kind='bookings') }}">{{ icon('download', 15) }} Bookings CSV</a>
+    <a class="btn secondary small" href="{{ url_for('admin_export', kind='matches') }}">{{ icon('download', 15) }} Matches CSV</a>
+    <a class="btn secondary small" href="{{ url_for('admin_export', kind='feedback') }}">{{ icon('download', 15) }} Feedback CSV</a>
+    <form class="inline" method="post" action="{{ url_for('admin_reset_bookings') }}"><button class="danger small">{{ icon('trash', 15) }} Clear all bookings</button></form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{{ icon('settings', 18) }} Fair configuration</h2>
+  <form method="post" action="{{ url_for('admin_settings') }}">
+    <div class="row">
+      <div><label>Fair name</label><input type="text" name="fair_name" value="{{ fair.fair_name }}"></div>
+      <div><label>Date</label><input type="date" name="fair_date" value="{{ fair.fair_date }}"></div>
+      <div><label>Start time</label><input type="time" name="start_time" value="{{ fair.start_time }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Slot length (min)</label><input type="number" min="1" name="slot_len" value="{{ fair.slot_len }}"></div>
+      <div><label>Slots per desk</label><input type="number" min="1" max="200" name="num_slots" value="{{ fair.num_slots }}"></div>
+      <div><label>Max bookings / student</label><input type="number" min="1" name="max_bookings" value="{{ fair.max_bookings }}"></div>
+      <div><label>Top-k matches shown</label><input type="number" min="1" name="top_k" value="{{ fair.top_k }}"></div>
+    </div>
+    <h3 style="margin-top:18px">Match score weights <span class="hint">M = skill·F + interest·I + academic·A</span></h3>
+    <div class="row" style="margin-top:-8px">
+      <div><label>Skill fit</label><input type="number" step="0.01" name="w_skill" value="{{ fair.w_skill }}"></div>
+      <div><label>Interest</label><input type="number" step="0.01" name="w_interest" value="{{ fair.w_interest }}"></div>
+      <div><label>Academic margin</label><input type="number" step="0.01" name="w_academic" value="{{ fair.w_academic }}"></div>
+      <div><label>Match threshold &tau;</label><input type="number" step="0.01" name="tau" value="{{ fair.tau }}"></div>
+    </div>
+    <p style="margin-bottom:0;margin-top:16px"><button>{{ icon('check', 16) }} Save configuration</button></p>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>{{ icon('briefcase', 18) }} Companies</h2><span class="muted" style="font-size:13px">Click a status to include or exclude a company</span></div>
+  <div class="table-wrap"><table>
+    <tr><th>Company</th><th>Required skills</th><th>Eligibility</th><th class="num">Desks</th><th class="num">Bookings</th><th>Status</th></tr>
+    {% for c in comps %}
+    <tr>
+      <td><div class="person"><span class="co-logo" style="width:32px;height:32px;font-size:13px">{{ c.name[:1] }}</span>
+        <div>{{ c.name }}<div class="muted" style="font-weight:400;font-size:12.5px">{{ c.role_title }} · {{ c.domain }}</div></div></div></td>
+      <td>{% for k in c.required %}<span class="tag plain">{{ k }}</span>{% endfor %}</td>
+      <td style="font-size:13px">CGPA &ge; {{ c.min_cgpa }} · &le; {{ c.max_backlogs }} backlog(s)<div class="muted">{{ c.branches|join(', ') }}</div></td>
+      <td class="num">{{ c.desks }}</td><td class="num"><strong>{{ counts.get(c.id, 0) }}</strong></td>
+      <td><form class="inline" method="post" action="{{ url_for('admin_toggle', cid=c.id) }}">
+        <button class="small {{ 'toggle-on' if c.participating else 'toggle-off' }}">{{ icon('check' if c.participating else 'x', 14) }} {{ 'Participating' if c.participating else 'Not participating' }}</button></form></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  <hr>
+  <h3>{{ icon('briefcase', 15) }} Add a company</h3>
+  <form method="post" action="{{ url_for('admin_new_company') }}" class="row">
+    <div><label>Name</label><input type="text" name="name" required></div>
+    <div><label>Login username</label><input type="text" name="username" required></div>
+    <div><label>Password</label><input type="password" name="password" minlength="6" required></div>
+    <div style="flex:0 0 auto"><button>Add company</button></div>
+  </form>
+</div>
+{% endblock %}

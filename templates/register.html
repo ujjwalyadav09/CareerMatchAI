@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Register · CareerMatch AI{% endblock %}
+{% block content %}
+<div class="auth">
+  <div class="card">
+    <h1>Student registration</h1>
+    <p class="sub">After registering, complete your profile or upload your resume to see your matches.</p>
+    <form method="post">
+      <label>Full name</label><input type="text" name="name" required>
+      <label>Email</label><input type="email" name="email">
+      <label>Username</label><input type="text" name="username" required autocomplete="username">
+      <label>Password <span class="hint">(at least 6 characters)</span></label><input type="password" name="password" minlength="6" required autocomplete="new-password">
+      <p style="margin-bottom:0"><button type="submit" style="width:100%">Create account</button></p>
+    </form>
+    <p class="muted" style="font-size:13px;margin-bottom:0">Already registered? <a href="{{ url_for('login') }}">Log in</a>.</p>
+  </div>
+</div>
+{% endblock %}

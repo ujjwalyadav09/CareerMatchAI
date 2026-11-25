@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, ring, pill, page_header, stat %}
+{% block title %}My matches · CareerMatch AI{% endblock %}
+{% block content %}
+{{ page_header('Welcome, ' ~ s.name, (s.branch or 'No branch') ~ ' · CGPA ' ~ s.cgpa ~ ' · ' ~ s.backlogs ~ ' backlog(s)', 'target') }}
+
+{% if not s.skills %}
+  <div class="flash error">{{ icon('alert', 18) }}<div>Your profile has no skills yet. <a href="{{ url_for('student_profile') }}">Upload your resume</a> to build it automatically, or fill it in manually.</div></div>
+{% endif %}
+
+<div class="stats">
+  {{ stat((completion * 100)|round|int ~ '%', 'profile complete', 'user', 'ok' if completion >= 0.85 else 'warn') }}
+  {{ stat(matches|length, 'top matches', 'target') }}
+  {{ stat(bookings|length ~ ' / ' ~ fair.max_bookings, 'slots booked', 'calendar', 'ok' if bookings else '') }}
+  {{ stat(fair.fair_date, 'fair date', 'clock') }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>{{ icon('calendar', 18) }} My booked slots</h2>
+    {% if bookings %}<a class="btn secondary small" href="{{ url_for('student_feedback') }}">{{ icon('message', 15) }} Give feedback</a>{% endif %}</div>
+  {% if bookings %}
+  <div class="timeline">
+    {% for b in bookings %}
+    <div class="tl-item">
+      <div class="tl-time">{{ slot_label(b.slot) }}</div>
+      <div class="grow"><strong>{{ b.company_name }}</strong><div class="muted" style="font-size:13px">Desk {{ b.desk }}</div></div>
+      <span class="tag {{ 'ok' if b.status == 'attended' else ('bad' if b.status == 'no_show' else 'plain') }}">{{ b.status.replace('_', ' ') }}</span>
+      {% if b.status == 'booked' %}
+        <form class="inline" method="post" action="{{ url_for('student_cancel', bid=b.id) }}"><button class="small danger">{{ icon('x', 14) }} Cancel</button></form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="muted">No bookings yet. Pick a matched company below and choose a time.</p>{% endif %}
+</div>
+
+<h2 class="section-title">{{ icon('star', 19) }} Top matches for you</h2>
+{% if matches %}
+<div class="grid">
+  {% for co, ex in matches %}
+  <div class="card match-card">
+    <div class="match-top">
+      <div class="co-logo">{{ co.name[:1] }}</div>
+      <div class="grow"><h3>{{ co.name }}</h3>
+        <div class="meta"><span>{{ icon('briefcase', 13) }} {{ co.role_title }}</span><span>{{ co.domain }}</span></div></div>
+      {{ ring(ex.score) }}
+    </div>
+    {% include "_explain.html" %}
+    <div class="card-actions">
+      {% if co.id in booked_ids %}<span class="tag ok">{{ icon('check', 13) }} Booked</span>
+        <a class="btn secondary small" href="{{ url_for('student_company', cid=co.id) }}">Details</a>
+      {% else %}<a class="btn small" href="{{ url_for('student_company', cid=co.id) }}">{{ icon('calendar', 15) }} View &amp; book slot</a>{% endif %}
+      <a class="btn secondary small" href="{{ url_for('student_company', cid=co.id, coach=1) }}">Prep guide</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="legend" style="margin:-4px 0 18px">Score out of 100: 70+ strong, 50–69 good, below 50 partial. &#10003; skill you have, &#10007; skill to learn, + preferred skill.</p>
+{% else %}
+<div class="card"><p class="muted">No companies currently clear the match threshold for your profile. Add more skills to your profile to improve your matches.</p></div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h2>{{ icon('briefcase', 18) }} Other participating companies</h2><span class="muted" style="font-size:13px">Why they aren't in your top matches</span></div>
+  <div class="table-wrap"><table>
+    <tr><th>Company</th><th>Role</th><th class="num">Score</th><th>Reason</th></tr>
+    {% for co, ex in others %}
+    <tr><td><a href="{{ url_for('student_company', cid=co.id) }}"><strong>{{ co.name }}</strong></a></td><td>{{ co.role_title }}</td>
+      <td class="num">{{ pill(ex.score) }}</td>
+      <td>{% if not ex.eligible %}{% for r in ex.ineligible_reasons %}<span class="tag bad">{{ r }}</span>{% endfor %}
+          {% elif ex.missing_required %}<span class="muted">Missing:</span> {% for k in ex.missing_required %}<span class="tag miss">{{ k }}</span>{% endfor %}
+          {% else %}<span class="muted">Lower overall score</span>{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+{% endblock %}

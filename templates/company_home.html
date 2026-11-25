@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, pill, page_header, stat %}
+{% block title %}{{ co.name }} · CareerMatch AI{% endblock %}
+{% block content %}
+{{ page_header(co.name, (co.role_title or 'Role not set') ~ ' · ' ~ (co.domain or 'no domain') ~ ' · ' ~ co.desks ~ ' desk(s)', 'briefcase', (url_for('company_profile'), 'edit requirements')) }}
+
+{% if not co.required %}
+  <div class="flash error">{{ icon('alert', 18) }}<div>Set your required skills and eligibility rules on the <a href="{{ url_for('company_profile') }}">requirements page</a> to get a shortlist.</div></div>
+{% endif %}
+
+<div class="stats">
+  {{ stat(shortlist|length, 'eligible matched candidates', 'users') }}
+  {{ stat(schedule|length, 'booked interactions', 'calendar') }}
+  {{ stat(schedule|selectattr('status', 'equalto', 'attended')|list|length, 'attended', 'check', 'ok') }}
+  {{ stat(outcomes.values()|select('equalto', 'interview')|list|length ~ ' / ' ~ outcomes.values()|select('equalto', 'offer')|list|length, 'interviews / offers', 'star', 'warn') }}
+</div>
+
+<div class="card" id="schedule">
+  <div class="card-head"><h2>{{ icon('calendar', 18) }} Booked schedule</h2>
+    <span class="muted" style="font-size:13px">Update attendance and outcome as the fair runs. Changes save instantly.</span></div>
+  {% if schedule %}
+  <div class="table-wrap"><table>
+    <tr><th>Time</th><th>Desk</th><th>Candidate</th><th class="num">Score</th><th>Attendance</th><th>Outcome</th></tr>
+    {% for b in schedule %}
+    <tr>
+      <td><strong>{{ slot_label(b.slot) }}</strong></td><td>{{ b.desk }}</td>
+      <td><a class="person" href="{{ url_for('company_candidate', sid=b.student_id) }}"><span class="avatar">{{ b.student_name[:1] }}</span>{{ b.student_name }}</a></td>
+      <td class="num">{{ pill(b.score or 0) }}</td>
+      <td>
+        <form class="inline" method="post" action="{{ url_for('company_booking_status', bid=b.id) }}">
+          <select name="status" onchange="this.form.submit()" style="min-width:120px">
+            {% for st in ['booked', 'attended', 'no_show'] %}<option value="{{ st }}" {{ 'selected' if b.status == st }}>{{ st.replace('_', ' ') }}</option>{% endfor %}
+          </select>
+        </form>
+      </td>
+      <td>
+        <form class="inline" method="post" action="{{ url_for('company_outcome') }}">
+          <input type="hidden" name="student_id" value="{{ b.student_id }}">
+          <select name="stage" onchange="this.form.submit()" style="min-width:120px">
+            {% set cur = outcomes.get(b.student_id, 'none') %}
+            {% for st in ['none', 'interview', 'offer'] %}<option value="{{ st }}" {{ 'selected' if cur == st }}>{{ st }}</option>{% endfor %}
+          </select>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="muted">No students have booked a slot yet.</p>{% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>{{ icon('star', 18) }} Pre-fair ranked shortlist</h2>
+    <span class="muted" style="font-size:13px">Only eligible candidates above the match threshold are shown.</span></div>
+  <div class="table-wrap"><table>
+    <tr><th>#</th><th>Candidate</th><th>Branch / CGPA</th><th class="num">Score</th><th>Required skills</th><th></th></tr>
+    {% for s, ex in shortlist %}
+    <tr>
+      <td class="muted">{{ loop.index }}</td>
+      <td><a class="person" href="{{ url_for('company_candidate', sid=s.id) }}"><span class="avatar">{{ s.name[:1] }}</span>{{ s.name }}</a></td>
+      <td>{{ s.branch }} · {{ s.cgpa }}</td>
+      <td class="num">{{ pill(ex.score) }}</td>
+      <td>{% for k in ex.matched_required %}<span class="tag ok">{{ k }}</span>{% endfor %}
+          {% for k in ex.missing_required %}<span class="tag miss">{{ k }}</span>{% endfor %}</td>
+      <td>{% if s.id in booked_sids %}<span class="tag ok">{{ icon('calendar', 12) }} booked</span>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted">No matching candidates.</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}
